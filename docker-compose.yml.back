@@ -1,0 +1,80 @@
+version: "3"
+
+services:
+### MySQL ################################################
+    mysql:
+      build:
+        context: ./mysql
+        dockerfile: Dockerfile
+      restart: always
+      environment:
+        - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+        - MYSQL_DATABASE=${MYSQL_DATABASE}
+        - MYSQL_USER=${MYSQL_USER}
+        - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+        - TZ=${WORKSPACE_TIMEZONE}
+      ports:
+        - "${MYSQL_PORT}:3306"
+      volumes:
+        - ${DATA_PATH_HOST}/mysql:/var/lib/mysql
+      networks:
+        - backend
+### Redis ################################################
+    redis:
+      build:
+        context: ./redis
+        dockerfile: Dockerfile
+      restart: always
+      ports:
+        - "${REDIS_PORT}:6379"
+      volumes:
+        - ${DATA_PATH_HOST}/redis:/data
+      networks:
+        - backend
+### PHP #########################################
+    php:
+      build:
+        context: ./php
+        dockerfile: Dockerfile
+      restart: always
+      volumes:
+        - ${NGINX_CODE_PATH}:/var/www/html
+      networks:
+        - backend
+### NGINX Server #########################################
+    nginx:
+      image: nginx:alpine
+      restart: always
+      volumes:
+        - ${NGINX_CODE_PATH}:/var/www/html
+        - ${NGINX_CONF_FILE}:/etc/nginx/nginx.conf
+        - ${NGINX_HOST_LOG_PATH}:/var/log/nginx
+        - ${NGINX_SSL_PATH}:/etc/nginx/ssl
+      ports:
+        - ${NGINX_HOST_HTTP_PORT}:80
+        - ${NGINX_HOST_HTTPS_PORT}:443
+      depends_on:
+        - php
+      networks:
+        - backend
+### RabbitMQ #############################################
+    rabbitmq:
+      build: ./rabbitmq
+      ports:
+        - "${RABBITMQ_NODE_HOST_PORT}:5672"
+        - "${RABBITMQ_MANAGEMENT_HTTP_HOST_PORT}:15672"
+        - "${RABBITMQ_MANAGEMENT_HTTPS_HOST_PORT}:15671"
+      privileged: true
+      environment:
+        - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
+        - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
+      hostname: laradock-rabbitmq
+      volumes:
+        - ${DATA_PATH_HOST}/rabbitmq:/var/lib/rabbitmq
+      depends_on:
+        - php
+      networks:
+        - backend
+networks:
+  backend:
+    driver: bridge
