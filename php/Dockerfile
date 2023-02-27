@@ -13,7 +13,7 @@ RUN apt-get update && \
         unzip \
         curl
 
-RUN docker-php-ext-install pdo_mysql mysqli opcache zip gd mbstring
+RUN docker-php-ext-install pdo_mysql mysqli opcache zip gd mbstring bcmath
 # 安装 Composer
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
